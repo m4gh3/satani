@@ -23,6 +23,25 @@ context_ut prefix_context;
 context_ut op_context;
 context_ut close_context;
 
+value_ut *to_rvalue(value_ut *in)
+{
+	if(in->type_id == lvalue)
+	{
+		in->val.s_int = lvalues[in->val.s_int];
+		in->type_id = rvalue;
+	}
+	return in;
+}
+
+void syntax_check(int b)
+{
+	if(b)
+	{
+		printf("Syntax error\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
 value_ut *read_num(size_t action_id, value_ut *pvalue, value_ut *svalue )
 {
 
@@ -42,27 +61,19 @@ value_ut *read_num(size_t action_id, value_ut *pvalue, value_ut *svalue )
 
 value_ut *minus_num(size_t action_id, value_ut *pvalue, value_ut *svalue )
 {
+	syntax_check(svalue == NULL);
+	to_rvalue(svalue);
 	svalue->val.s_int*=-1;
 	return svalue;
 }
 
 value_ut *op_num(size_t action_id, value_ut *pvalue, value_ut *svalue )
 {
-	if( svalue == NULL )
-	{
-		printf("Syntax error\n");
-		exit(EXIT_FAILURE);
-	}
-	if(pvalue->type_id == lvalue)
-	{
-		pvalue->val.s_int = lvalues[pvalue->val.s_int];
-		pvalue->type_id = rvalue;
-	}
-	if(svalue->type_id == lvalue)
-	{
-		svalue->val.s_int = lvalues[svalue->val.s_int];
-		svalue->type_id = rvalue;
-	}
+
+	syntax_check( pvalue == NULL || svalue == NULL );
+	to_rvalue(pvalue);
+	to_rvalue(svalue);
+
 	switch( action_id )
 	{
 		case 0:
@@ -81,8 +92,10 @@ value_ut *op_num(size_t action_id, value_ut *pvalue, value_ut *svalue )
 			pvalue->val.s_int %= svalue->val.s_int;
 			break;
 	}
+
 	free(svalue);
 	return pvalue;
+
 }
 
 value_ut *sval_forw(size_t action_id, value_ut *pvalue, value_ut *svalue )
@@ -131,7 +144,7 @@ token_ut prefix_tokens[] =
 	(token_ut){ "\n", NULL,	0, 0, 4, 0, &prefix_context, NULL },
 	(token_ut){ " " , NULL,	0, 0, 4, 0, &prefix_context, NULL },
 	(token_ut){ "(", sval_forw, 0, 0, 4, 0, &close_context, &prefix_context },
-	(token_ut){ "-", minus_num, 0, 0, 4, 4, &op_context, &num_context },
+	(token_ut){ "-", minus_num, 0, 0, 4, 4, &op_context, &prefix_context },
 	(token_ut){ "0", read_num, 0, 1, 4, 4, &op_context, &num_context },
 	(token_ut){ "1", read_num, 1, 1, 4, 4, &op_context, &num_context },
 	(token_ut){ "2", read_num, 2, 1, 4, 4, &op_context, &num_context },
