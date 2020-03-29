@@ -111,16 +111,15 @@ value_ut *read_var(size_t action_id, value_ut *pvalue, value_ut *svalue )
 
 value_ut *assign(size_t action_id, value_ut *pvalue, value_ut *svalue )
 {
-	if( pvalue == NULL || svalue == NULL || pvalue->type_id != lvalue )
-	{
-		printf("Syntax error\n");
-		exit(EXIT_FAILURE);
-	}
-	if(svalue->type_id == lvalue)
-		svalue->val.s_int = lvalues[svalue->val.s_int];
+
+	syntax_check(pvalue == NULL || svalue == NULL || pvalue->type_id != lvalue );
+	
+	to_rvalue(svalue);
 	lvalues[pvalue->val.s_int] = svalue->val.s_int;
 	free(svalue);
+
 	return pvalue;
+
 }
 
 value_ut *print_value(size_t action_id, value_ut *pvalue, value_ut *svalue )
