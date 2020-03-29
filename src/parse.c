@@ -10,16 +10,22 @@ value_ut *parse(context_ut *context, tape_ut *tape, value_ut *pvalue, size_t pre
 	{
 
 		int i = 0;
-		while( i < context->size )
+		int j = context->size-1;
+		int m;
+		while( i <= j )
 		{
-			int compres = tape_push(tape, context->tokens[i].str, i );
+			m = ( j-i >> 1 ) + i;
+			int compres = tape_push(tape, context->tokens[m].str, m );
 			if( compres < 0 )
 			{
 				reset_tape(tape, 0 );
-				i++;
+				i = m+1;
 			}
 			else if( compres > 0 )
-				break;
+			{
+				reset_tape(tape, 0 );
+				j = m-1;
+			}
 		}
 
 		match_idx = tape->match_idx;
