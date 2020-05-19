@@ -1,5 +1,6 @@
 #include "../src/parse.h"
 #include <stdlib.h>
+#include <math.h>
 
 enum type_id_ut
 {
@@ -7,16 +8,23 @@ enum type_id_ut
 	rvalue
 };
 
+#define extrval(value, type ) ((value)->val.type##_val)
+
 struct value_ut
 {
 	enum type_id_ut type_id;
 	union
 	{
-		int s_int;
+		struct
+		{
+			float dec_place;
+			float val;
+		} float_val;
+		int lvalue_val;
 	} val;
 };
 
-int lvalues[4] = { 1, 2, 3, 4 };
+float lvalues[4] = { 1.f, 2.f, 3.f, 4.f };
 
 context_ut num_context;
 context_ut prefix_context;
@@ -27,7 +35,7 @@ value_ut *to_rvalue(value_ut *in)
 {
 	if(in->type_id == lvalue)
 	{
-		in->val.s_int = lvalues[in->val.s_int];
+		extrval(in, float ).val = lvalues[extrval(in, lvalue )];
 		in->type_id = rvalue;
 	}
 	return in;
@@ -48,12 +56,26 @@ value_ut *read_num(size_t action_id, value_ut *pvalue, value_ut *svalue )
 	if( pvalue == NULL )
 	{
 		pvalue = malloc(sizeof(value_ut));
-		pvalue->val.s_int = 0;
+		extrval(pvalue, float ).val = 0.f;
+		extrval(pvalue, float ).dec_place = 1.f;
 		pvalue->type_id = rvalue;
 	}
 
 	if( 0 <= action_id && action_id <= 9 )
-		pvalue->val.s_int = pvalue->val.s_int * 10 + action_id;
+	{
+		if( extrval(pvalue, float ).dec_place >= 1 )
+			extrval(pvalue, float ).val = extrval(pvalue, float ).val * 10.f + (float)action_id;
+		else
+		{
+			extrval(pvalue, float ).val += extrval(pvalue, float ).dec_place * (float)action_id;
+			extrval(pvalue, float ).dec_place *= 0.1;
+		}
+	}
+	else if( action_id == 16 )
+	{
+		syntax_check( extrval(pvalue, float ).dec_place < 1 );
+		extrval(pvalue, float ).dec_place *= 0.1;
+	}
 	
 	return pvalue;
 
@@ -63,7 +85,7 @@ value_ut *minus_num(size_t action_id, value_ut *pvalue, value_ut *svalue )
 {
 	syntax_check(svalue == NULL);
 	to_rvalue(svalue);
-	svalue->val.s_int*=-1;
+	extrval(svalue, float ).val*=-1;
 	return svalue;
 }
 
@@ -77,19 +99,20 @@ value_ut *op_num(size_t action_id, value_ut *pvalue, value_ut *svalue )
 	switch( action_id )
 	{
 		case 0:
-			pvalue->val.s_int += svalue->val.s_int;
+			extrval(pvalue, float ).val += extrval(svalue, float ).val;
 			break;
 		case 1:
-			pvalue->val.s_int -= svalue->val.s_int;
+			extrval(pvalue, float ).val -= extrval(svalue, float ).val;
 			break;
 		case 2:
-			pvalue->val.s_int *= svalue->val.s_int;
+			extrval(pvalue, float ).val *= extrval(svalue, float ).val;
 			break;
 		case 3:
-			pvalue->val.s_int /= svalue->val.s_int;
+			extrval(pvalue, float ).val /= extrval(svalue, float ).val;
 			break;
 		case 4:
-			pvalue->val.s_int %= svalue->val.s_int;
+			extrval(pvalue, float ).val = fmod(extrval(pvalue, float ).val, extrval(svalue, float ).val ); 
+			//pvalue->val.s_int %= svalue->val.s_int;
 			break;
 	}
 
@@ -104,7 +127,7 @@ value_ut *sval_forw(size_t action_id, value_ut *pvalue, value_ut *svalue )
 value_ut *read_var(size_t action_id, value_ut *pvalue, value_ut *svalue )
 {
 	pvalue = malloc(sizeof(value_ut));
-	pvalue->val.s_int = action_id;
+	extrval(pvalue, lvalue ) = action_id;
 	pvalue->type_id = lvalue;
 	return pvalue;
 }
@@ -115,7 +138,7 @@ value_ut *assign(size_t action_id, value_ut *pvalue, value_ut *svalue )
 	syntax_check(pvalue == NULL || svalue == NULL || pvalue->type_id != lvalue );
 	
 	to_rvalue(svalue);
-	lvalues[pvalue->val.s_int] = svalue->val.s_int;
+	lvalues[extrval(pvalue, lvalue )] = extrval(svalue, float ).val;
 	free(svalue);
 
 	return pvalue;
@@ -126,12 +149,8 @@ value_ut *print_value(size_t action_id, value_ut *pvalue, value_ut *svalue )
 {
 	if(pvalue != NULL)
 	{
-		if(pvalue->type_id == lvalue)
-		{
-			pvalue->val.s_int = lvalues[pvalue->val.s_int];
-			pvalue->type_id = rvalue;
-		}
-		printf("%d\n", pvalue->val.s_int );
+		to_rvalue(pvalue);
+		printf("%f\n", extrval(pvalue, float ).val );
 		free(pvalue);
 	}
 	return NULL;
@@ -144,6 +163,7 @@ token_ut prefix_tokens[] =
 	(token_ut){ " " , NULL,	0, 0, 4, 0, &prefix_context, NULL },
 	(token_ut){ "(", sval_forw, 0, 0, 4, 0, &close_context, &prefix_context },
 	(token_ut){ "-", minus_num, 0, 0, 4, 4, &op_context, &prefix_context },
+	(token_ut){ ".", read_num, 16, 1, 4, 4, &op_context, &num_context },
 	(token_ut){ "0", read_num, 0, 1, 4, 4, &op_context, &num_context },
 	(token_ut){ "1", read_num, 1, 1, 4, 4, &op_context, &num_context },
 	(token_ut){ "2", read_num, 2, 1, 4, 4, &op_context, &num_context },
@@ -164,6 +184,7 @@ token_ut prefix_tokens[] =
 
 token_ut num_tokens[] =
 {
+	(token_ut){ ".", read_num, 16, 1, 4, 4, &op_context, &num_context },
 	(token_ut){ "0", read_num, 0, 0, 4, 4, &num_context, NULL },
 	(token_ut){ "1", read_num, 1, 0, 4, 4, &num_context, NULL },
 	(token_ut){ "2", read_num, 2, 0, 4, 4, &num_context, NULL },

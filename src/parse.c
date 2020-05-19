@@ -14,7 +14,7 @@ value_ut *parse(context_ut *context, tape_ut *tape, value_ut *pvalue, size_t pre
 		int m;
 		while( i <= j )
 		{
-			m = ( j-i >> 1 ) + i;
+			m = ( ( j-i ) >> 1 ) + i;
 			int compres = tape_push(tape, context->tokens[m].str, m );
 			if( compres < 0 )
 			{
