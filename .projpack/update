@@ -1,3 +1,5 @@
 #!/bin/sh
 git pull
 make build/libuparse.so
+cp src/*.h ../../include/uparser
+cp build/libuparse.so ../../lib

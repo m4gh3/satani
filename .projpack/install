@@ -1,2 +1,5 @@
 #!/bin/sh
 make build/libuparse.so
+mkdir ../../include/uparser
+cp src/*.h ../../include/uparser
+cp build/libuparse.so ../../lib
