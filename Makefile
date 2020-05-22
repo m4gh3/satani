@@ -12,7 +12,7 @@ clean_examples:
 build/libuparse.so: build/tape.o src/parse.o
 	$(CC) $(CFLAGS) build/tape.o build/parse.o -shared -o build/libuparse.so
 
-build/parse.o: build/tape.o src/parse.c
+build/parse.o: build/tape.o build/parse.c
 	$(CC) $(CFLAGS) build/tape.o src/parse.c -c -o build/parse.o
 
 build/tape.o: src/tape.c
