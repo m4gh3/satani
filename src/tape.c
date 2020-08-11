@@ -9,6 +9,11 @@ int tape_push(tape_ut *tape, char *str, size_t match_idx )
 	{
 		if( tape->newc == 0 )
 			tape->newc = tape->getchr(tape->par);
+		if( str[tape->match_len] == 0 )
+		{
+			tape->match = str;
+			tape->match_idx = match_idx;
+		}
 		if( tape->newc == str[tape->curr_match_len] )
 		{
 			tape->match = str;
